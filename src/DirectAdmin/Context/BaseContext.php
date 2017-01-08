@@ -65,4 +65,30 @@ abstract class BaseContext
     {
         return $this->connection->invoke('POST', $command, ['form_params' => $postParameters]);
     }
+
+    /**
+     * Invokes the DirectAdmin API via HTTP GET using a custom command.
+     * This command should include the 'CMD_' part.
+     *
+     * @param string $command Full DirectAdmin command to invoke
+     * @param array $query Optional query parameters
+     * @return array The parsed and validated response
+     */
+    public function invokeCustomGet($command, $query = [])
+    {
+        return $this->connection->invokeCustom('GET', $command, ['query' => $query]);
+    }
+
+    /**
+     * Invokes the DirectAdmin API via HTTP POST using a custom command.
+     * This command should include the 'CMD_' part.
+     *
+     * @param string $command Full DirectAdmin command to invoke
+     * @param array $postParameters Optional form parameters
+     * @return array The parsed and validated response
+     */
+    public function invokeCustomPost($command, $postParameters = [])
+    {
+        return $this->connection->invokeCustom('POST', $command, ['form_params' => $postParameters]);
+    }
 }

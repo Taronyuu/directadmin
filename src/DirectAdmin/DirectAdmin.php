@@ -134,6 +134,25 @@ class DirectAdmin
     }
 
     /**
+     * Invokes the DirectAdmin API with specific options and a custom command
+     *
+     *
+     * @param string $method HTTP method to use (ie. GET or POST)
+     * @param string $command Full DirectAdmin command to invoke
+     * @param array $options Guzzle options to use for the call
+     * @return array The unvalidated response
+     * @throws DirectAdminException If anything went wrong on the network level
+     */
+    public function invokeCustom($method, $command, $options = [])
+    {
+        $result = $this->rawRequest($method, $command, $options);
+        if (!empty($result['error'])) {
+            throw new DirectAdminException("$method to $command failed: $result[details] ($result[text])");
+        }
+        return Conversion::sanitizeArray($result);
+    }
+
+    /**
      * Returns a clone of the connection logged in as a managed user or reseller.
      *
      * @param string $username
