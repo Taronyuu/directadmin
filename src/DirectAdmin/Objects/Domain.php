@@ -63,26 +63,7 @@ class Domain extends BaseObject
     public function __construct($name, UserContext $context, $config)
     {
         parent::__construct($name, $context);
-
-        // Unpack domain config
-        $data = is_array($config) ? $config : \GuzzleHttp\Psr7\parse_query($config);
-        $this->domainName = $data['domain'];
-
-        // Determine owner
-        if ($data['username'] === $context->getUsername()) {
-            $this->owner = $context->getContextUser();
-        } else {
-            throw new DirectAdminException('Could not determine relationship between context user and domain');
-        }
-
-        // Parse plain options
-        $bandwidths = array_map('trim', explode('/', $data['bandwidth']));
-        $this->bandwidthUsed = floatval($bandwidths[0]);
-        $this->bandwidthLimit = ctype_alpha($bandwidths[1]) ? null : floatval($bandwidths[1]);
-        $this->diskUsage = floatval($data['quota']);
-
-        $this->aliases = array_filter(explode('|', $data['alias_pointers']));
-        $this->pointers = array_filter(explode('|', $data['pointers']));
+        $this->setConfig($context, is_array($config) ? $config : \GuzzleHttp\Psr7\parse_query($config));
     }
 
     /**
@@ -108,8 +89,8 @@ class Domain extends BaseObject
             'php' => Conversion::onOff($php, $user->hasPHP()),
             'cgi' => Conversion::onOff($cgi, $user->hasCGI()),
         ];
-        $user->getContext()->invokePost('DOMAIN', $options);
-        $config = $user->getContext()->invokeGet('ADDITIONAL_DOMAINS');
+        $user->getContext()->invokeApiPost('DOMAIN', $options);
+        $config = $user->getContext()->invokeApiGet('ADDITIONAL_DOMAINS');
         return new self($domainName, $user->getContext(), $config[$domainName]);
     }
 
@@ -158,7 +139,7 @@ class Domain extends BaseObject
         } else {
             $list = &$this->pointers;
         }
-        $this->getContext()->invokePost('DOMAIN_POINTER', $parameters);
+        $this->getContext()->invokeApiPost('DOMAIN_POINTER', $parameters);
         $list[] = $domain;
         $list = array_unique($list);
     }
@@ -179,7 +160,7 @@ class Domain extends BaseObject
      */
     public function delete()
     {
-        $this->getContext()->invokePost('DOMAIN', [
+        $this->getContext()->invokeApiPost('DOMAIN', [
             'delete' => true,
             'confirmed' => true,
             'select0' => $this->domainName,
@@ -216,7 +197,7 @@ class Domain extends BaseObject
      */
     public function getCatchall()
     {
-        $value = $this->getContext()->invokeGet('EMAIL_CATCH_ALL', ['domain' => $this->domainName]);
+        $value = $this->getContext()->invokeApiGet('EMAIL_CATCH_ALL', ['domain' => $this->domainName]);
         return isset($value['value']) ? $value['value'] : null;
     }
 
@@ -256,7 +237,7 @@ class Domain extends BaseObject
     public function getForwarders()
     {
         return $this->getCache(self::CACHE_FORWARDERS, function () {
-            $forwarders = $this->getContext()->invokeGet('EMAIL_FORWARDERS', [
+            $forwarders = $this->getContext()->invokeApiGet('EMAIL_FORWARDERS', [
                 'domain' => $this->getDomainName(),
             ]);
             return DomainObject::toDomainObjectArray($forwarders, Forwarder::class, $this);
@@ -269,7 +250,7 @@ class Domain extends BaseObject
     public function getMailboxes()
     {
         return $this->getCache(self::CACHE_MAILBOXES, function () {
-            $boxes = $this->getContext()->invokeGet('POP', [
+            $boxes = $this->getContext()->invokeApiGet('POP', [
                 'domain' => $this->getDomainName(),
                 'action' => 'full_list',
             ]);
@@ -299,7 +280,7 @@ class Domain extends BaseObject
     public function getSubdomains()
     {
         return $this->getCache(self::CACHE_SUBDOMAINS, function () {
-            $subs = $this->getContext()->invokeGet('SUBDOMAINS', ['domain' => $this->getDomainName()]);
+            $subs = $this->getContext()->invokeApiGet('SUBDOMAINS', ['domain' => $this->getDomainName()]);
             $subs = array_combine($subs, $subs);
             return DomainObject::toDomainObjectArray($subs, Subdomain::class, $this);
         });
@@ -316,7 +297,7 @@ class Domain extends BaseObject
      */
     public function invokePost($command, $action, $parameters = [], $clearCache = true)
     {
-        $response = $this->getContext()->invokePost($command, array_merge([
+        $response = $this->getContext()->invokeApiPost($command, array_merge([
             'action' => $action,
             'domain' => $this->domainName,
         ], $parameters));
@@ -333,7 +314,7 @@ class Domain extends BaseObject
     {
         $parameters = array_merge(['domain' => $this->domainName, 'update' => 'Update'],
             (empty($newValue) || $newValue[0] == ':') ? ['catch' => $newValue] : ['catch' => 'address', 'value' => $newValue]);
-        $this->getContext()->invokePost('EMAIL_CATCH_ALL', $parameters);
+        $this->getContext()->invokeApiPost('EMAIL_CATCH_ALL', $parameters);
     }
 
     /**
@@ -344,5 +325,32 @@ class Domain extends BaseObject
     public function __toString()
     {
         return $this->getDomainName();
+    }
+
+    /**
+     * Sets configuration options from raw DirectAdmin data.
+     *
+     * @param UserContext $context Owning user context
+     * @param array $config An array of settings
+     */
+    private function setConfig(UserContext $context, array $config)
+    {
+        $this->domainName = $config['domain'];
+
+        // Determine owner
+        if ($config['username'] === $context->getUsername()) {
+            $this->owner = $context->getContextUser();
+        } else {
+            throw new DirectAdminException('Could not determine relationship between context user and domain');
+        }
+
+        // Parse plain options
+        $bandwidths = array_map('trim', explode('/', $config['bandwidth']));
+        $this->bandwidthUsed = floatval($bandwidths[0]);
+        $this->bandwidthLimit = ctype_alpha($bandwidths[1]) ? null : floatval($bandwidths[1]);
+        $this->diskUsage = floatval($config['quota']);
+
+        $this->aliases = array_filter(explode('|', $config['alias_pointers']));
+        $this->pointers = array_filter(explode('|', $config['pointers']));
     }
 }

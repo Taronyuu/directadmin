@@ -15,10 +15,10 @@ use Omines\DirectAdmin\DirectAdmin;
  *
  * @author Niels Keurentjes <niels.keurentjes@omines.com>
  */
-class EnvironmentTest extends \PHPUnit_Framework_TestCase
+class EnvironmentTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @expectedException Omines\DirectAdmin\DirectAdminException
+     * @expectedException \Omines\DirectAdmin\DirectAdminException
      */
     public function testCorruptedUrl()
     {
@@ -27,7 +27,7 @@ class EnvironmentTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @expectedException Omines\DirectAdmin\DirectAdminException
+     * @expectedException \Omines\DirectAdmin\DirectAdminException
      */
     public function testInvalidUsername()
     {
@@ -36,7 +36,7 @@ class EnvironmentTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @expectedException Omines\DirectAdmin\DirectAdminException
+     * @expectedException \Omines\DirectAdmin\DirectAdminException
      */
     public function testInvalidPassword()
     {
@@ -45,16 +45,16 @@ class EnvironmentTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @expectedException Omines\DirectAdmin\DirectAdminException
+     * @expectedException \Omines\DirectAdmin\DirectAdminException
      */
     public function testInvalidCall()
     {
         $admin = DirectAdmin::connectAdmin(DIRECTADMIN_URL, MASTER_ADMIN_USERNAME, MASTER_ADMIN_PASSWORD);
-        $admin->invokeGet('INVALID_COMMAND');
+        $admin->invokeApiGet('INVALID_COMMAND');
     }
 
     /**
-     * @expectedException Omines\DirectAdmin\DirectAdminException
+     * @expectedException \Omines\DirectAdmin\DirectAdminException
      */
     public function testInvalidUrl()
     {
